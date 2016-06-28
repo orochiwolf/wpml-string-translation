@@ -80,7 +80,7 @@ class WPML_ST_Label_Translation {
 			}
 		}
 		
-		$string = new WPML_ST_string( $return[ 'id_singular' ], $wpdb );
+		$string = new WPML_ST_String( $return[ 'id_singular' ], $wpdb );
 		$return[ $string->get_language() ] = array(
 				'singular' => $singular_label,
 				'general'  => $label,
