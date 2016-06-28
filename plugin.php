@@ -5,7 +5,7 @@ Plugin URI: https://wpml.org/
 Description: Adds theme and plugins localization capabilities to WPML | <a href="https://wpml.org">Documentation</a> | <a href="https://wpml.org/version/wpml-3-2/">WPML 3.2 release notes</a>
 Author: OnTheGoSystems
 Author URI: http://www.onthegosystems.com/
-Version: 2.3.8
+Version: 2.3.9
 Plugin Slug: wpml-string-translation
 */
 
@@ -26,7 +26,7 @@ if ( defined( 'ICL_SITEPRESS_VERSION' ) && is_array( $bundle ) ) {
 	}
 }
 
-define( 'WPML_ST_VERSION', '2.3.8' );
+define( 'WPML_ST_VERSION', '2.3.9' );
 
 // Do not uncomment the following line!
 // If you need to use this constant, use it in the wp-config.php file
@@ -34,9 +34,13 @@ define( 'WPML_ST_VERSION', '2.3.8' );
 
 define( 'WPML_ST_PATH', dirname( __FILE__ ) );
 
-require_once WPML_ST_PATH . '/embedded/wpml/commons/autoloader.php';
-$wpml_auto_loader_instance = WPML_Auto_Loader::get_instance();
-$wpml_auto_loader_instance->register( WPML_ST_PATH . '/' );
+$autoloader_dir = WPML_ST_PATH . '/embedded';
+if ( version_compare( PHP_VERSION, '5.3.0' ) >= 0 ) {
+	$autoloader = $autoloader_dir . '/autoload.php';
+} else {
+	$autoloader = $autoloader_dir . '/autoload_52.php';
+}
+require_once $autoloader;
 
 require WPML_ST_PATH . '/embedded/wpml/commons/src/dependencies/class-wpml-dependencies.php';
 
