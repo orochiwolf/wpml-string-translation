@@ -1,6 +1,10 @@
 <?php
 
-class WPML_Admin_String_Filter extends WPML_Displayed_String_Filter {
+class WPML_Register_String_Filter extends WPML_Displayed_String_Filter {
+	/**
+	 * @var array
+	 */
+	private $excluded_contexts = array();
 
 	private $registered_string_cache = array();
 	
@@ -8,39 +12,75 @@ class WPML_Admin_String_Filter extends WPML_Displayed_String_Filter {
 	private $string_factory;
 
 	/**
-	 * @param wpdb                         $wpdb
-	 * @param SitePress                    $sitepress
-	 * @param string                       $language
-	 * @param WPML_ST_String_Factory       $string_factory
-	 * @param WPML_Displayed_String_Filter $existing_filter
+	 * @var WPML_Autoregister_Save_Strings
 	 */
-	public function __construct( &$wpdb, &$sitepress, $language, &$string_factory, $existing_filter = null ) {
-		parent::__construct( $wpdb, $sitepress, $language, $existing_filter );
-		$this->string_factory = &$string_factory;
+	private $save_strings;
+
+	// Current string data.
+	protected $name;
+	protected $domain;
+	protected $gettext_context;
+	protected $name_and_gettext_context;
+	protected $key;
+
+	/**
+	 * @param wpdb $wpdb
+	 * @param SitePress $sitepress
+	 * @param string $language
+	 * @param null|object $string_factory
+	 * @param null $existing_filter
+	 * @param array $excluded_contexts
+	 * @param WPML_ST_Db_Cache_Factory|null $db_cache_factory
+	 * @param WPML_Autoregister_Save_Strings|null $save_strings
+	 */
+	public function __construct(
+		&$wpdb, &$sitepress,
+		$language,
+		&$string_factory,
+		$existing_filter = null,
+		array $excluded_contexts = array(),
+		WPML_ST_DB_Cache_Factory $db_cache_factory = null,
+		WPML_Autoregister_Save_Strings $save_strings = null
+	) {
+		parent::__construct( $wpdb, $sitepress, $language, $existing_filter, $db_cache_factory );
+		$this->string_factory    = &$string_factory;
+		$this->excluded_contexts = $excluded_contexts;
+		$this->save_strings      = $save_strings;
 	}
 
-	public function translate_by_name_and_context( $untranslated_text, $name, $context = "", &$has_translation = null ) {
+	public function translate_by_name_and_context( $untranslated_text, $name, $context = '', &$has_translation = null ) {
 		if ( $untranslated_text ) {
-			$this->initialize_current_string( $name, $context );
-			$translation = $this->string_from_registered();
+			list ($name_tmp, $domain, $gettext_content) = $this->transform_parameters( $name, $context );
+			$translation = $this->db_cache->get_translation( $name_tmp, $domain, $untranslated_text, $gettext_content );
 
-			if ( $translation === false ) {
-				$this->register_string( $context, $name, $untranslated_text );
-				$translation = $untranslated_text;
+			if ( ! $translation instanceof WPML_ST_Page_Translation ) {
+				if ( ! in_array( $domain, $this->excluded_contexts ) ) {
+					$save_strings = $this->get_save_strings();
+					$save_strings->save( $untranslated_text, $name_tmp, $domain, $gettext_content );
+				}
+
+				$result = $untranslated_text;
+				$has_translation = false;
+			} else {
+				$result = $translation->get_value();
+				$has_translation = $translation->has_translation();
 			}
 		} else {
-			$translation = parent::translate_by_name_and_context( $untranslated_text, $name, $context );
+			$result = parent::translate_by_name_and_context( $untranslated_text, $name, $context, $has_translation );
 		}
-		$has_translation = $translation !== false && $translation != $untranslated_text;
 
-		return $translation !== false ? $translation : $untranslated_text;
+		return $result;
+	}
+
+	public function force_saving_of_autoregistered_strings() {
+		$this->get_save_strings()->shutdown();
 	}
 
 	public function register_string( $context, $name, $value, $allow_empty_value = false, $source_lang = '' ) {
-		global $WPML_Sticky_Links;
 
 		$name = trim( $name ) ? $name : md5( $value );
 		$this->initialize_current_string( $name, $context );
+
 		/* cpt slugs - do not register them when scanning themes and plugins
 		 * if name starting from 'URL slug: '
 		 * and context is different from 'WordPress'
@@ -53,35 +93,13 @@ class WPML_Admin_String_Filter extends WPML_Displayed_String_Filter {
 		list( $name, $context ) = $this->truncate_name_and_context( $name, $context );
 
 		if ( $source_lang == '' ) {
-			$lang_of_domain = new WPML_Language_Of_Domain( $this->sitepress );
-			$domain_lang    = $lang_of_domain->get_language( $domain );
-			$source_lang    = $domain_lang ? $domain_lang
-				: ( strpos( $domain, 'admin_texts_' ) === 0
-				    || $name === 'Tagline' || $name === 'Blog Title'
-					? $this->sitepress->get_user_admin_language( get_current_user_id() ) : 'en' );
-			$source_lang    = $source_lang ? $source_lang : 'en';
+			$source_lang = $this->get_save_strings()->get_source_lang( $name, $domain );
 		}
 
 		$res = $this->get_registered_string( $domain, $context, $name );
 		if ( $res ) {
 			$string_id = $res['id'];
-			/*
-			 * If Sticky Links plugin is active and set to change links in Strings,
-			 * we need to process $value and change links into sticky before comparing
-			 * with saved in DB $res->value.
-			 * Otherwise after every String Translation screen refresh status of this string
-			 * will be changed into 'needs update'
-			 */
-			$alp_settings = get_option( 'alp_settings' );
-			if ( ! empty( $alp_settings['sticky_links_strings'] ) // do we have setting about sticky links in strings?
-			     && $alp_settings['sticky_links_strings'] // is this set to TRUE?
-			     && defined( 'WPML_STICKY_LINKS_VERSION' )
-			) { // sticky links plugin is active?
-				require_once ICL_PLUGIN_PATH . '/inc/absolute-links/absolute-links.class.php';
-				$absolute_links_object = new AbsoluteLinks;
-				$alp_broken_links      = array();
-				$value                 = $absolute_links_object->_process_generic_text( $value, $alp_broken_links );
-			}
+
 			$update_string = array();
 			if ( $value != $res['value'] ) {
 				$update_string['value'] = $value;
@@ -117,16 +135,11 @@ class WPML_Admin_String_Filter extends WPML_Displayed_String_Filter {
 			$string_id = $this->save_string( $value, $allow_empty_value, $source_lang, $domain, $context, $name );
 		}
 
-		if ( defined( 'WPML_TM_PATH' ) && ! empty( $WPML_Sticky_Links ) && $WPML_Sticky_Links->settings['sticky_links_strings'] ) {
-			require_once WPML_TM_PATH . '/inc/translation-proxy/wpml-pro-translation.class.php';
-			WPML_Pro_Translation::_content_make_links_sticky( $string_id, 'string', false );
-		}
-
 		if ( ! isset( $this->name_cache[ $key ] ) ) {
 			$this->name_cache[ $key ] = $value;
 		}
 		
-		$this->found_cache[ $domain. $this->language ][ $name ] = array( $value, true );
+		$this->found_cache[ $domain. $source_lang ][ $name ] = array( $value, true );
 		$this->cache_needs_saving = true;
 
 
@@ -174,7 +187,7 @@ class WPML_Admin_String_Filter extends WPML_Displayed_String_Filter {
 			) );
 			$string_id = $this->wpdb->insert_id;
 			if ( $string_id === 0 ) {
-				throw new Exception( 'Count not add String with arguments: value: ' . $value . ' allow_empty_value:' . $allow_empty_value . ' language: ' . $language );
+				throw new Exception( 'Could not add String with arguments: value: ' . $value . ' allow_empty_value:' . $allow_empty_value . ' language: ' . $language );
 			}
 
 			icl_update_string_status( $string_id );
@@ -188,5 +201,71 @@ class WPML_Admin_String_Filter extends WPML_Displayed_String_Filter {
 		}
 
 		return $string_id;
+	}
+
+	/**
+	 * @param string          $name
+	 * @param string|string[] $context
+	 *
+	 * @return string[]
+	 */
+	protected function initialize_current_string( $name, $context ) {
+		if ( is_array( $context ) ) {
+			$this->domain          = isset ( $context[ 'domain' ] ) ? $context[ 'domain' ] : '';
+			$this->gettext_context = isset ( $context[ 'context' ] ) ? $context[ 'context' ] : '';
+		} else {
+			$this->domain = $context;
+			$this->gettext_context = '';
+		}
+
+		list( $this->name, $this->domain ) = array_map( array(
+			$this,
+			'truncate_long_string'
+		), array( $name, $this->domain ) );
+
+		$this->name_and_gettext_context = $this->name . $this->gettext_context;
+		$this->key = md5( $this->domain . $this->name_and_gettext_context );
+	}
+
+	/**
+	 * @param string          $name
+	 * @param string|string[] $context
+	 *
+	 * @return array
+	 */
+	protected function truncate_name_and_context( $name, $context) {
+		if ( is_array( $context ) ) {
+			$domain          = isset ( $context[ 'domain' ] ) ? $context[ 'domain' ] : '';
+			$gettext_context = isset ( $context[ 'context' ] ) ? $context[ 'context' ] : '';
+		} else {
+			$domain = $context;
+			$gettext_context = '';
+		}
+		list( $name, $domain ) = array_map( array(
+			$this,
+			'truncate_long_string'
+		), array( $name, $domain ) );
+
+		return array( $name . $gettext_context, $domain );
+	}
+
+	protected function key_by_name_and_context( $name, $context ) {
+
+		return array(
+			$this->domain,
+			$this->gettext_context,
+			md5( $this->domain . $this->name_and_gettext_context )
+		);
+	}
+
+	/**
+	 * @return WPML_Autoregister_Save_Strings
+	 */
+	private function get_save_strings() {
+		if ( null === $this->save_strings ) {
+			$this->save_strings = new WPML_Autoregister_Save_Strings( $this->wpdb, $this->sitepress );
+		}
+
+		return $this->save_strings;
 	}
 }
