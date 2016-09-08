@@ -255,7 +255,7 @@ function icl_register_string( $context, $name, $value, $allow_empty_value = fals
     }
 
 	/**
-	 * @var WPML_Admin_String_Filter $admin_string_filter
+	 * @var WPML_Register_String_Filter $admin_string_filter
 	 * @var WPML_String_Translation $WPML_String_Translation
 	 */
 	$strings_language    = $WPML_String_Translation->get_current_string_language( $name );
@@ -485,16 +485,12 @@ function _icl_is_string_change($result, $original_value) {
 }
 
 function icl_add_string_translation( $string_id, $language, $value = null, $status = false, $translator_id = null, $translation_service = null, $batch_id = null ) {
-	global $wpdb, $WPML_String_Translation;
+	global $wpdb;
 	
 	$string = new WPML_ST_String( $string_id, $wpdb );
 
 	$translated_string_id = $string->set_translation( $language, $value, $status, $translator_id, $translation_service, $batch_id );
-
-	$string_filter = $WPML_String_Translation->get_string_filter( $language );
-	if ( $string_filter ) {
-		$string_filter->clear_cache();
-	}
+	
 	return $translated_string_id;
 }
 
@@ -779,7 +775,7 @@ function icl_st_register_user_strings_all(){
 function icl_st_update_string_actions( $context, $name, $old_value, $new_value, $force_complete = false ) {
 	if ( class_exists( 'WPML_WPDB_User' ) ) {
 		global $wpdb;
-		require_once 'wpml-st-string-update.class.php';
+		require_once dirname( __FILE__ ) . '/wpml-st-string-update.class.php';
 
 		$string_update = new WPML_ST_String_Update( $wpdb );
 		$string_update->update_string( $context, $name, $old_value, $new_value, $force_complete );
