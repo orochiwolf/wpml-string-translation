@@ -59,6 +59,10 @@ class WPML_ST_DB_Cache {
 	}
 
 	public function shutdown() {
+		if ( $this->is_404() ) {
+			return;
+		}
+
 		if ( $this->translations && $this->translations->has_new_translations() ) {
 			$this->translations_persist->store_new_translations(
 				$this->language,
@@ -66,6 +70,13 @@ class WPML_ST_DB_Cache {
 				$this->translations->get_new_translations()
 			);
 		}
+	}
+
+	/**
+	 * @return bool
+	 */
+	private function is_404() {
+		return is_404() || is_home() && '/' !== $_SERVER['REQUEST_URI'];
 	}
 
 	/**

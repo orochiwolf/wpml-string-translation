@@ -8,7 +8,6 @@ class WPML_ST_Page_URL_Preprocessor {
 	private $white_list = array(
 		'p',
 		'page_id',
-		'page',
 		'pagename',
 		'shop',
 		'lang',
@@ -21,9 +20,32 @@ class WPML_ST_Page_URL_Preprocessor {
 	/**
 	 * @var array
 	 */
+	private $admin_white_list = array(
+		'page',
+	);
+
+	/**
+	 * @var array
+	 */
 	private $ignore_value = array(
 		'shop',
+		'p',
+		'page_id',
+		'cat',
+		'tag',
 	);
+
+	/**
+	 * @var WPML_ST_WP_Wrapper
+	 */
+	private $wp;
+
+	/**
+	 * @param WPML_ST_WP_Wrapper $wp
+	 */
+	public function __construct( WPML_ST_WP_Wrapper $wp ) {
+		$this->wp = $wp;
+	}
 
 	/**
 	 * @param string $url
@@ -35,51 +57,15 @@ class WPML_ST_Page_URL_Preprocessor {
 			return $url;
 		}
 
-		if ( false !== strpos( $url, '/wp-admin/admin-ajax.php' ) ) {
-			return '/wp-admin/admin-ajax.php';
-		}
-
-		$url = $this->process_forum_topics( $url );
-		$url = $this->process_path( $url );
 		$url = $this->process_query( $url );
+		$path = parse_url( $url, PHP_URL_PATH );
 
+		$new_path = $this->wp->parse_request( $path );
+		$url = str_replace( $path, $new_path, $url );
+		
 		return $url;
-	}
-
-	/**
-	 * @param string $url
-	 *
-	 * @return string
-	 */
-	private function process_forum_topics( $url ) {
-		if ( false !== strpos( $url, '/forums/topic/' ) ) {
-			return '/forums/topic/';
-		} else {
-			return $url;
-		}
 	}
 	
-	/**
-	 * @param string $url
-	 *
-	 * @return string
-	 */
-	private function process_path( $url ) {
-		$path = parse_url( $url, PHP_URL_PATH );
-		if ( empty( $path ) ) {
-			return $url;
-		}
-
-		if ( '/' === $path[ strlen( $path ) - 1 ] ) {
-			return $url;
-		}
-
-		$new_path = $path . '/';
-		$url      = str_replace( $path, $new_path, $url );
-
-		return $url;
-	}
-
 	/**
 	 * @param string $url
 	 *
@@ -89,7 +75,11 @@ class WPML_ST_Page_URL_Preprocessor {
 		$query = parse_url( $url, PHP_URL_QUERY );
 		parse_str( $query, $output );
 
-		$white_list = apply_filters( 'wpml-st-url-preprocessor-whitelist', $this->white_list );
+		$white_list = $this->white_list;
+		if ( is_admin() ) {
+			$white_list = array_merge( $white_list, $this->admin_white_list );
+		}
+		$white_list = apply_filters( 'wpml-st-url-preprocessor-whitelist', $white_list );
 		$output = array_intersect_key( $output, array_flip( $white_list ) );
 
 		foreach ( array_intersect_key( $output, array_flip( $this->ignore_value ) ) as $key => $value ) {

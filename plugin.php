@@ -2,18 +2,18 @@
 /*
 Plugin Name: WPML String Translation
 Plugin URI: https://wpml.org/
-Description: Adds theme and plugins localization capabilities to WPML | <a href="https://wpml.org">Documentation</a> | <a href="https://wpml.org/version/wpml-3-5-0/">WPML 3.5.0 release notes</a>
+Description: Adds theme and plugins localization capabilities to WPML | <a href="https://wpml.org">Documentation</a> | <a href="https://wpml.org/version/wpml-3-5-2/">WPML 3.5.2 release notes</a>
 Author: OnTheGoSystems
 Author URI: http://www.onthegosystems.com/
-Version: 2.4.1.1
+Version: 2.4.2
 Plugin Slug: wpml-string-translation
 */
 
-if ( defined( 'WPML_ST_VERSION' ) ) {
+if ( defined( 'WPML_ST_VERSION' ) || get_option( '_wpml_inactive' ) ) {
 	return;
 }
 
-define( 'WPML_ST_VERSION', '2.4.1.1' );
+define( 'WPML_ST_VERSION', '2.4.2' );
 
 // Do not uncomment the following line!
 // If you need to use this constant, use it in the wp-config.php file
@@ -56,7 +56,8 @@ function wpml_st_core_loaded() {
 
 	if ( isset( $wpml_admin_notices ) && 1 === $sitepress->get_setting( 'theme_localization_type' ) && $sitepress->get_wp_api()->is_admin() ) {
 		global $wpml_st_admin_notices;
-		$wpml_st_admin_notices = new WPML_ST_Themes_And_Plugins_Updates( $wpml_admin_notices );
+		$themes_and_plugins_settings = new WPML_ST_Themes_And_Plugins_Settings();
+		$wpml_st_admin_notices = new WPML_ST_Themes_And_Plugins_Updates( $wpml_admin_notices, $themes_and_plugins_settings );
 		$wpml_st_admin_notices->init_hooks();
 	}
 }

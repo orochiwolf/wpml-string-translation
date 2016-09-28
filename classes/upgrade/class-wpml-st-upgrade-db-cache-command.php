@@ -20,7 +20,7 @@ class WPML_ST_Upgrade_Db_Cache_Command extends WPML_WPDB_User implements IWPML_S
 	private $icl_string_urls_sql = '
 	CREATE TABLE IF NOT EXISTS `%sicl_string_urls` (
 	  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-	  `language` varchar(5) %s DEFAULT NULL,
+	  `language` varchar(7) %s DEFAULT NULL,
 	  `url` varchar(255) DEFAULT NULL,
 	  PRIMARY KEY (`id`),
 	  UNIQUE KEY `string_string_lang_url` (`language`,`url`(191))
@@ -58,8 +58,8 @@ class WPML_ST_Upgrade_Db_Cache_Command extends WPML_WPDB_User implements IWPML_S
 	/**
 	 * @return string
 	 */
-	public static function get_commnand_id() {
-		return __CLASS__ . '_3';
+	public static function get_command_id() {
+		return __CLASS__ . '_2.4.2_1';
 	}
 
 
