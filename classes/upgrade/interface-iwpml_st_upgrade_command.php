@@ -8,5 +8,5 @@ interface IWPML_St_Upgrade_Command {
 
 	public function run_frontend();
 
-	public static function get_commnand_id();
+	public static function get_command_id();
 }

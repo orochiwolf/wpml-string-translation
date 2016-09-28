@@ -15,7 +15,7 @@ class WPML_ST_Upgrade_Migrate_Originals extends WPML_WPDB_And_SP_User implements
 		}
 	}
 
-	public static function get_commnand_id() {
+	public static function get_command_id() {
 		return __CLASS__;
 	}
 	

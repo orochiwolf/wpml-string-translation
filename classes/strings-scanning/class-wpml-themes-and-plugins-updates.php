@@ -4,23 +4,29 @@
  * @author OnTheGo Systems
  */
 class WPML_ST_Themes_And_Plugins_Updates {
-	/**
-	 * @var WPML_Notices
-	 */
+
+	/** @var WPML_Notices */
 	private $admin_notices;
+	/** @var WPML_ST_Themes_And_Plugins_Settings */
+	private $settings;
 
 	/**
 	 * WPML_ST_Admin_Notices constructor.
 	 *
-	 * @param WPML_Notices $admin_notices
+	 * @param WPML_Notices                        $admin_notices
+	 * @param WPML_ST_Themes_And_Plugins_Settings $settings
 	 */
-	public function __construct( WPML_Notices $admin_notices ) {
+	public function __construct( WPML_Notices $admin_notices, WPML_ST_Themes_And_Plugins_Settings $settings ) {
 		$this->admin_notices = $admin_notices;
+		$this->settings = $settings;
 	}
 
 	public function init_hooks() {
-		add_action( 'upgrader_process_complete', array( $this, 'upgrader_process_complete' ), 10, 2 );
-		add_action( 'updated_option', array( $this, 'updated_option' ), 10, 3 );
+		if ( $this->settings->must_display_notices() ) {
+			add_action( 'upgrader_process_complete', array( $this, 'upgrader_process_complete' ), 10, 2 );
+			add_action( 'updated_option', array( $this, 'updated_option' ), 10, 3 );
+			$this->settings->init_hooks();
+		}
 	}
 
 	public function data_is_valid( $thing ) {
@@ -140,11 +146,17 @@ class WPML_ST_Themes_And_Plugins_Updates {
 				$url .= '#' . $url_hash;
 			}
 
-			$notice = new WPML_Notice( $plugin_or_theme, '<strong>' . $plugin_or_theme . '</strong>&nbsp;&mdash;&nbsp;' . $message, 'wpml-st-string-scan' );
+			$themes_and_plugins_settings = new WPML_ST_Themes_And_Plugins_Settings();
+
+			$notice = new WPML_Notice( $plugin_or_theme, '<strong>' . $plugin_or_theme . '</strong>&nbsp;&mdash;&nbsp;' . $message, $themes_and_plugins_settings->get_notices_group() );
 			$notice->set_css_class_types( 'info' );
 			$notice->set_exclude_from_pages( array( $string_scan_page ) );
 			$notice->add_action( new WPML_Notice_Action( __( 'Scan now', 'wpml-string-translation' ), $url, false, false, true ) );
 			$notice->add_action( new WPML_Notice_Action( __( 'Skip', 'wpml-string-translation' ), '#', false, true ) );
+			$dismiss_all_action = new WPML_Notice_Action( __( 'Dismiss all these notices', 'wpml-string-translation' ), '#', false, false, false );
+			$dismiss_all_action->set_group_to_dismiss( $this->settings->get_notices_group() );
+			$dismiss_all_action->set_js_callback( 'wpml_st_hide_strings_scan_notices' );
+			$notice->add_action( $dismiss_all_action );
 			$this->admin_notices->add_notice( $notice );
 		}
 	}
@@ -154,6 +166,6 @@ class WPML_ST_Themes_And_Plugins_Updates {
 	}
 
 	public function remove_notice( $id ) {
-		$this->admin_notices->remove_notice( 'wpml-st-string-scan', $id );
+		$this->admin_notices->remove_notice( $this->settings->get_notices_group(), $id );
 	}
 }
