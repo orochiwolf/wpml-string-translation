@@ -8,17 +8,10 @@ class WPML_ST_Page_Translations_Persist implements IWPML_ST_Page_Translations_Pe
 	private $wpdb;
 
 	/**
-	 * @var WPML_ST_Translations_Handle_Invalid_Strings
-	 */
-	private $logger;
-
-	/**
 	 * @param WPDB $wpdb
-	 * @param WPML_ST_Translations_Handle_Invalid_Strings $logger
 	 */
-	public function __construct( $wpdb, WPML_ST_Translations_Handle_Invalid_Strings $logger ) {
+	public function __construct( $wpdb ) {
 		$this->wpdb = $wpdb;
-		$this->logger = $logger;
 	}
 
 	/**
@@ -50,9 +43,58 @@ class WPML_ST_Page_Translations_Persist implements IWPML_ST_Page_Translations_Pe
 					";
 
 		$res_prepare = $this->wpdb->prepare( $res_query, array( $language, $page_url, $language ) );
-		$rowset         = $this->wpdb->get_results( $res_prepare, ARRAY_A );
+		$rowset      = $this->wpdb->get_results( $res_prepare, ARRAY_A );
 
-		return $this->build_translations( $rowset, $page_url );
+		$rowset = is_array( $rowset ) ? $rowset : array();
+		$rowset = $this->validate_rowset( $rowset ) ? $rowset : array();
+		$rowset = array_map( array( $this, 'create_translation_from_db_record' ), $rowset );
+
+		return new WPML_ST_Page_Translations( $rowset );
+	}
+
+	/**
+	 * @param array $rowset
+	 *
+	 * @return bool
+	 */
+	private function validate_rowset( array $rowset ) {
+		if ( 0 === count( $rowset ) ) {
+			return true;
+		}
+
+		$expected_fields = array( 'id', 'name', 'context', 'status', 'gettext_context', 'tra', 'orig' );
+		$row             = current( $rowset );
+
+		if ( count( $row ) !== count( $expected_fields ) ) {
+			return false;
+		}
+
+		foreach ( $expected_fields as $field ) {
+			if ( ! array_key_exists( $field, $row ) ) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * @param array $res
+	 *
+	 * @return WPML_ST_Page_Translation
+	 */
+	private function create_translation_from_db_record( array $res ) {
+		$has_translation = ! empty( $res['tra'] ) && ICL_TM_COMPLETE == $res['status'];
+		$value = $has_translation ? $res['tra'] : $res['orig'];
+
+		return new WPML_ST_Page_Translation(
+			$res['id'],
+			$res['name'],
+			$res['context'],
+			$value,
+			$has_translation,
+			$res['gettext_context']
+		);
 	}
 
 	/**
@@ -96,11 +138,18 @@ class WPML_ST_Page_Translations_Persist implements IWPML_ST_Page_Translations_Pe
 		}
 
 		if ( ! $id ) {
-			$this->wpdb->insert($this->wpdb->prefix . 'icl_string_urls' , array(
-				'language' => $language,
-				'url'   => $page_url,
-			));
+			// wpdb::insert method is not used due to problems with converting NULL value to empty string in some cases
+			$params = array( $language );
+			if ( null !== $page_url ) {
+				$params[] = $page_url;
+			}
 
+			$sql = "INSERT IGNORE INTO {$this->wpdb->prefix}icl_string_urls (`language`, `url`) VALUES (%s, ";
+			$sql .= null !== $page_url ? '%s' : 'NULL';
+			$sql .= ')';
+			$sql = $this->wpdb->prepare( $sql, $params );
+
+			$this->wpdb->query( $sql );
 			$id = $this->wpdb->insert_id;
 		}
 
@@ -109,6 +158,9 @@ class WPML_ST_Page_Translations_Persist implements IWPML_ST_Page_Translations_Pe
 
 	public function clear_cache() {
 		$sql = "TRUNCATE `{$this->wpdb->prefix}icl_string_pages`";
+		$this->wpdb->query( $sql );
+
+		$sql = "TRUNCATE `{$this->wpdb->prefix}icl_string_urls`";
 		$this->wpdb->query( $sql );
 	}
 
@@ -129,46 +181,6 @@ class WPML_ST_Page_Translations_Persist implements IWPML_ST_Page_Translations_Pe
 		$value = $this->wpdb->get_var( $query );
 
 		return (bool) $value;
-	}
-
-	/**
-	 * @param $rowset
-	 * @param $page_url
-	 *
-	 * @return WPML_ST_Page_Translations
-	 */
-	private function build_translations( $rowset, $page_url ) {
-		$translations = array();
-		foreach ( $rowset as $row ) {
-			try {
-				$translations[] = $this->create_translation_from_db_record( $row );
-			} catch ( InvalidArgumentException $e ) {
-				$this->logger->log_invalid_cached_translation( $row );
-			}
-		}
-
-		$this->logger->store_invalid_records( $page_url );
-
-		return new WPML_ST_Page_Translations( $translations );
-	}
-
-	/**
-	 * @param array $res
-	 *
-	 * @return WPML_ST_Page_Translation
-	 */
-	private function create_translation_from_db_record( array $res ) {
-		$has_translation = ! empty( $res['tra'] ) && ICL_TM_COMPLETE == $res['status'];
-		$value = $has_translation ? $res['tra'] : $res['orig'];
-
-		return new WPML_ST_Page_Translation(
-			$res['id'],
-			$res['name'],
-			$res['context'],
-			$value,
-			$has_translation,
-			$res['gettext_context']
-		);
 	}
 
 	/**

@@ -34,5 +34,8 @@ class WPML_ST_Reset {
 	public function remove_db_tables() {
 		$table = $this->wpdb->prefix . 'icl_string_pages';
 		$this->wpdb->query( 'DROP TABLE IF EXISTS ' . $table );
+
+		$table = $this->wpdb->prefix . 'icl_string_urls';
+		$this->wpdb->query( 'DROP TABLE IF EXISTS ' . $table );
 	}
 }

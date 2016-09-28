@@ -299,12 +299,19 @@ function wpml_register_single_string_action( $context, $name, $value, $allow_emp
 add_action('wpml_register_single_string', 'wpml_register_single_string_action', 10, 5);
 
 function icl_translate( $context, $name, $value = false, $allow_empty_value = false, &$has_translation = null, $target_lang = null ) {
+	static $lock = false;
+	if ( $lock ) {
+		return $value;
+	}
+
+	$lock = true;
 	if ( ! ( is_multisite() && ms_is_switched() ) || $GLOBALS['blog_id'] === end( $GLOBALS['_wp_switched_stack'] ) ) {
 		/** @var WPML_String_Translation $WPML_String_Translation */
 		global $WPML_String_Translation;
 		$filter = $WPML_String_Translation->get_string_filter( $target_lang ? $target_lang : $WPML_String_Translation->get_current_string_language( $name ) );
 		$value  = $filter ? $filter->translate_by_name_and_context( $value, $name, $context, $has_translation ) : $value;
 	}
+	$lock = false;
 
 	return $value;
 }
