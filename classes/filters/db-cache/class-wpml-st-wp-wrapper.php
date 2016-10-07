@@ -10,7 +10,7 @@ class WPML_ST_WP_Wrapper {
 	 * @param WP $wp
 	 */
 	public function __construct( WP $wp ) {
-		$this->wp = $wp;
+		$this->wp = clone $wp;
 	}
 
 	/**
@@ -22,7 +22,7 @@ class WPML_ST_WP_Wrapper {
 		global $wp_filter;
 
 		$tmp_wp_filter = $wp_filter;
-		$GLOBALS['wp_filter'] = array();
+		$GLOBALS['wp_filter'] = array( 'sanitize_title' => $tmp_wp_filter['sanitize_title'] );
 
 		$result = $path;
 
