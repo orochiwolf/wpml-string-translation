@@ -2,6 +2,9 @@
 
 
 class WPML_ST_Page_URL_Preprocessor {
+
+	const AJAX_REQUEST_VALUE = 'ajax-request';
+
 	/**
 	 * @var array
 	 */
@@ -55,6 +58,10 @@ class WPML_ST_Page_URL_Preprocessor {
 	public function process_url( $url ) {
 		if ( empty( $url ) ) {
 			return $url;
+		}
+
+		if ( ( defined( 'DOING_AJAX' ) && DOING_AJAX ) || wpml_is_ajax()  ) {
+			return self::AJAX_REQUEST_VALUE;
 		}
 
 		$url = $this->process_query( $url );
