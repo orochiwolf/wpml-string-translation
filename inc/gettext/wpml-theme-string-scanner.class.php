@@ -18,7 +18,7 @@ class WPML_Theme_String_Scanner extends WPML_String_Scanner {
 
 		$this->scan_starting( 'theme ' );
 
-		$this->current_path = TEMPLATEPATH;
+		$this->current_path = realpath( TEMPLATEPATH );
 
 		$theme_info  = wp_get_theme();
 		$text_domain = $theme_info->get( 'TextDomain' );
