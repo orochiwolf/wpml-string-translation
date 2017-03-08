@@ -162,9 +162,13 @@ class WPML_String_Translation
 			wp_enqueue_style( 'wp-jquery-ui-dialog' );
 		}
 
-		if ( $sitepress && $sitepress->get_setting( 'theme_localization_type' ) && $sitepress->get_setting( 'theme_localization_type' ) == 1 ) {
-			add_action( 'icl_custom_localization_type', array( $this, 'localization_type_ui' ) );
+		if ( $sitepress ) {
+			$theme_localization_type = new WPML_Theme_Localization_Type( $sitepress );
+			if ( $theme_localization_type->is_st_type() ) {
+				add_action( 'icl_custom_localization_type', array( $this, 'localization_type_ui' ) );
+			}
 		}
+
 
 		add_action( 'wp_ajax_st_theme_localization_rescan', array( $this, 'scan_theme_for_strings' ) );
 		add_action( 'wp_ajax_st_plugin_localization_rescan', array( $this, 'scan_plugins_for_strings' ) );
@@ -366,6 +370,7 @@ class WPML_String_Translation
 		}
 
 		require_once WPML_ST_PATH . '/inc/potx.php';
+		require_once WPML_ST_PATH . '/inc/potx-callback.php';
 
 		if ( is_file( $file ) && WP_PLUGIN_DIR == dirname( $file ) ) {
 
@@ -871,13 +876,23 @@ class WPML_String_Translation
 		if ( ! $this->verify_ajax_call( 'wpml_change_string_language_nonce' ) ) {
 			die( 'verification failed' );
 		}
+		
+		$change_string_language_dialog = $this->create_change_string_language_dialog();
 
-		global $wpdb, $sitepress;
-
-		$change_string_language_dialog = new WPML_Change_String_Language_Dialog( $wpdb, $sitepress );
-		$response = $change_string_language_dialog->change_language_of_strings( $_POST[ 'strings' ], $_POST[ 'language' ] );
+		$string_ids = array_map( 'intval', $_POST['strings'] );
+		$lang       = filter_var( isset( $_POST['language'] ) ? $_POST['language'] : '', FILTER_SANITIZE_SPECIAL_CHARS );
+		$response = $change_string_language_dialog->change_language_of_strings( $string_ids, $lang );
 
 		wp_send_json( $response );
+	}
+
+	/**
+	 * @return WPML_Change_String_Language_Dialog
+	 */
+	protected function create_change_string_language_dialog() {
+		global $wpdb;
+
+		return new WPML_Change_String_Language_Dialog( $wpdb, $this->sitepress );
 	}
 
 	public function change_string_lang_of_domain_ajax_callback( ) {

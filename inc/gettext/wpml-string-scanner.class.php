@@ -20,6 +20,9 @@ class WPML_String_Scanner {
 	 */
 	private $wp_filesystem;
 
+	/** @var WPML_File $wpml_file */
+	private $wpml_file;
+
 	/**
 	 * @var array
 	 */
@@ -393,7 +396,7 @@ class WPML_String_Scanner {
 					$position = $file . '::' . $line;
 				}
 
-				if ( ! $str_pos_mapper->is_string_tracked( $string_id, $position, $kind ) ) {
+				if ( ! $str_pos_mapper->is_string_tracked( $string_id, $position, $kind ) && ! $this->is_string_preview() ) {
 					$str_pos_mapper->insert( $string_id, $position, $kind );
 				}
 			}
@@ -674,6 +677,26 @@ class WPML_String_Scanner {
 	 */
 	public function set_file_name_converter(WPML_File_Name_Converter $converter) {
 		$this->file_name_converter = $converter;
+	}
+
+	/**
+	 * @return WPML_File
+	 */
+	protected function get_wpml_file() {
+		if ( ! $this->wpml_file ) {
+			$this->wpml_file = new WPML_File();
+		}
+
+		return $this->wpml_file;
+	}
+
+	private function is_string_preview() {
+		$is_string_preview = false;
+		if ( array_key_exists( 'icl_string_track_value', $_GET ) || array_key_exists( 'icl_string_track_context', $_GET ) ) {
+			$is_string_preview = true;
+		}
+
+		return $is_string_preview;
 	}
 }
 
