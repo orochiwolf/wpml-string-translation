@@ -37,7 +37,7 @@ class WPML_ST_Verify_Dependencies {
 	function notice_no_wpml() {
 		?>
 		<div class="error wpml-admin-notice wpml-st-inactive wpml-inactive">
-			<p><?php _e( 'Please activate WPML Multilingual CMS to have WPML String Translation working.', 'wpml-string-translation' ); ?></p>
+			<p><?php esc_html_e( 'Please activate WPML Multilingual CMS to have WPML String Translation working.', 'wpml-string-translation' ); ?></p>
 		</div>
 		<?php
 	}
@@ -45,7 +45,7 @@ class WPML_ST_Verify_Dependencies {
 	function wpml_not_installed_warning() {
 		?>
 		<div class="message error wpml-admin-notice wpml-st-inactive wpml-not-configured">
-			<p><?php printf( __( 'WPML String Translation is enabled but not effective. Please finish the installation of WPML first.', 'wpml-string-translation' ) ); ?></p>
+			<p><?php esc_html_e( 'WPML String Translation is enabled but not effective. Please finish the installation of WPML first.', 'wpml-string-translation' ); ?></p>
 		</div>
 		<?php
 	}
@@ -54,7 +54,7 @@ class WPML_ST_Verify_Dependencies {
 		?>
 		<div
 			class="message error wpml-admin-notice wpml-st-inactive wpml-outdated">
-			<p><?php printf( __( 'WPML String Translation is enabled but not effective, because WPML is outdated. Please update WPML first.', 'wpml-string-translation' ) ); ?></p>
+			<p><?php esc_html_e( 'WPML String Translation is enabled but not effective, because WPML is outdated. Please update WPML first.', 'wpml-string-translation' ); ?></p>
 		</div>
 		<?php
 	}

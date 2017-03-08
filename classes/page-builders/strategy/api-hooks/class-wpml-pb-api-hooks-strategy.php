@@ -15,15 +15,25 @@ class WPML_PB_API_Hooks_Strategy implements IWPML_PB_Strategy {
 	 *
 	 */
 	public function register_strings( $post ) {
-		// No need to do anything here because Plugins should already register their strings via wpml_register_string shortcode.
+		do_action( 'wpml_page_builder_register_strings', $post, $this->get_package_key( $post->ID ) );
 	}
 
 	public function set_factory( $factory ) {
 		$this->factory = $factory;
 	}
 
+	/**
+	 * @param int $page_id
+	 *
+	 * @return array
+	 */
 	public function get_package_key( $page_id ) {
-		// This is not needed because we are not registering strings
+		return array(
+			'kind'    => $this->get_package_kind(),
+			'name'    => $page_id,
+			'title'   => 'Page Builder Page ' . $page_id,
+			'post_id' => $page_id,
+		);
 	}
 
 	public function get_package_kind() {

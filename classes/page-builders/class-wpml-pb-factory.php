@@ -39,10 +39,6 @@ class WPML_PB_Factory {
 		return new WPML_PB_Update_Shortcodes_In_Content( $strategy );
 	}
 
-	public function get_update_translated_posts_from_original( IWPML_PB_Strategy $strategy ) {
-		return new WPML_PB_Update_Translated_Posts_From_Original( $this->sitepress, $strategy );
-	}
-
 	public function get_api_hooks_content_updater( IWPML_PB_Strategy $strategy ) {
 		return new WPML_PB_Update_API_Hooks_In_Content( $strategy );
 	}
