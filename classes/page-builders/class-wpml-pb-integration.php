@@ -74,18 +74,6 @@ class WPML_PB_Integration {
 	}
 
 	/**
-	 * @param $post_id
-	 * @param $post
-	 */
-	public function update_translated_posts_form_original( $post ) {
-		if ( $this->is_post_status_ok( $post ) && $this->is_original_post( $post ) ) {
-			foreach ( $this->strategies as $strategy ) {
-				$this->factory->get_update_translated_posts_from_original( $strategy )->update( $post );
-			}
-		}
-	}
-
-	/**
 	 * @param $post
 	 *
 	 * @return bool
@@ -119,7 +107,6 @@ class WPML_PB_Integration {
 
 		foreach( $this->save_post_queue as $post_id => $post ) {
 			$this->register_all_strings_for_translation( $post );
-			$this->update_translated_posts_form_original( $post );
 		}
 	}
 	public function new_translation( $translated_string_id ) {

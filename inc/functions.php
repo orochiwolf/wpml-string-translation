@@ -92,10 +92,9 @@ function icl_st_init(){
 	add_filter('widget_text', 'icl_sw_filters_widget_text', 0); //highest priority
 
 	$setup_complete = apply_filters('WPML_get_setting', false, 'setup_complete' );
-	$theme_localization_type = apply_filters('WPML_get_setting', false, 'theme_localization_type' );
-	if ( $setup_complete
-	     && $theme_localization_type == 1
-	) {
+	$theme_localization_type = new WPML_Theme_Localization_Type( $sitepress );
+
+	if ( $setup_complete && $theme_localization_type->is_st_type() ) {
 		add_filter( 'gettext', 'icl_sw_filters_gettext', 9, 3 );
 		add_filter( 'gettext_with_context', 'icl_sw_filters_gettext_with_context', 1, 4 );
 		add_filter( 'ngettext', 'icl_sw_filters_ngettext', 9, 5 );
@@ -850,57 +849,11 @@ function icl_st_string_in_page($string_id){
     }
 }
 
-function icl_st_string_in_source($string_id){
-    global $wpdb, $sitepress_settings;
-    // get positions
-    $files = $wpdb->get_col($wpdb->prepare("SELECT position_in_page 
-                            FROM {$wpdb->prefix}icl_string_positions 
-                            WHERE string_id = %d AND kind = %d", $string_id, ICL_STRING_TRANSLATION_STRING_TRACKING_TYPE_SOURCE));
+function icl_st_string_in_source( $string_id ){
+	global $sitepress;
 
-    if(!empty($files)){
-        echo '<div id="icl_show_source_top">';
-        for($i = 0; $i < count($files); $i++){
-            $c = $i+1;
-            $exp = explode('::', $files[$i]);
-            $line = $exp[1];
-            echo '<a href="#" onclick="icl_show_in_source('.$i.','.$line.')">'.$c.'</a><br />';
-        }
-        echo '</div>';
-        echo '<div id="icl_show_source_wrap">';
-        for($i = 0; $i < count($files); $i++){
-            $exp = explode('::', $files[$i]);
-            $file = $exp[0];
-            if(!file_exists($file) || !is_readable($file)) continue;
-            $line = $exp[1];
-            echo '<div class="icl_string_track_source" id="icl_string_track_source_'.$i.'"';
-            if($i > 0){
-                echo 'style="display:none"';
-            }
-            echo '>';
-            if($i == 0){
-                echo '<script type="text/javascript">icl_show_in_source_scroll_once = ' . $line . '</script>';
-            }
-            echo '<div class="icl_string_track_filename">' . $file . "</div>\n";
-            echo '<pre>';
-            $content = file($file);
-            echo '<ol>';
-            $hl_color = !empty($sitepress_settings['st']['hl_color'])?$sitepress_settings['st']['hl_color']:'#FFFF00';
-            foreach($content as $k=>$l){
-                if($k == $line-1){
-                    $hl =  ' style="background-color:'.$hl_color.';"';
-                }else{
-                    $hl = '';
-                }
-                echo '<li id="icl_source_line_'.$i.'_'.$k.'"'.$hl.'">' . esc_html($l) . '&nbsp;</li>';
-            }
-            echo '</ol>';
-            echo '</pre>';
-            echo '</div>';
-        }
-        echo '</div>';
-    }else{
-        _e('No records found', 'wpml-string-translation');
-    }
+	$positions_in_source = new WPML_ST_String_Positions_In_Source( $sitepress );
+	$positions_in_source->dialog_render( $string_id );
 }
 
 function _icl_st_get_options_writes($path){
@@ -1104,34 +1057,6 @@ function icl_st_admin_notices_string_updated() {
 	</div>
 	<?php
 }
-
-function wpml_st_pos_scan_store_results( $string, $domain, $context, $file, $line ) {
-	global $__wpml_st_po_file_content;
-	static $strings = array();
-
-	//avoid duplicates
-	if ( isset( $strings[ $domain ][ $string ] ) ) {
-		return false;
-	}
-	$strings[ $domain ][ $string ] = true;
-
-	$file = @file( $file );
-	if ( ! empty( $file ) ) {
-		$__wpml_st_po_file_content .= PHP_EOL;
-		$__wpml_st_po_file_content .= '# ' . @trim( $file[ $line - 2 ] ) . PHP_EOL;
-		$__wpml_st_po_file_content .= '# ' . @trim( $file[ $line - 1 ] ) . PHP_EOL;
-		$__wpml_st_po_file_content .= '# ' . @trim( $file[ $line ] ) . PHP_EOL;
-	}
-
-	//$__wpml_st_po_file_content .= 'msgid "'.str_replace('"', '\"', $string).'"' . PHP_EOL;
-	$__wpml_st_po_file_content .= PHP_EOL;
-	if ( $context ) {
-		$__wpml_st_po_file_content .= 'msgctxt "' . $context . '"' . PHP_EOL;
-	}
-	$__wpml_st_po_file_content .= 'msgid "' . $string . '"' . PHP_EOL;
-	$__wpml_st_po_file_content .= 'msgstr ""' . PHP_EOL;
-}
-
 
 function wp_filesystem_init() {
     add_filter( 'filesystem_method', 'set_direct_fs_method', PHP_INT_MAX );

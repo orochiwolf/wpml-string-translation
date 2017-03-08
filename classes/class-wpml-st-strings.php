@@ -2,6 +2,8 @@
 
 class WPML_ST_Strings {
 
+	const EMPTY_CONTEXT_LABEL = 'empty-context-domain';
+
 	/**
 	 * @var SitePress
 	 */
@@ -38,6 +40,19 @@ class WPML_ST_Strings {
 			foreach ( $active_languages as $l ) {
 				$language_code_aliases[] = esc_sql( str_replace( '-', '', $l['code'] ) );
 			}
+
+			foreach ( $user_lang_pairs as $source_lang_code => $pair ) {
+				if ( ! isset( $active_languages[ $source_lang_code ] ) ) {
+					$active_languages[ $source_lang_code ] = $this->sitepress->get_language_details( $source_lang_code );
+					$language_code_aliases[] = esc_sql( str_replace( '-', '', $source_lang_code ) );
+				}
+				foreach ( array_keys( $pair ) as $target_lang_code ) {
+					if ( ! isset( $active_languages[ $target_lang_code ] ) ) {
+						$active_languages[ $target_lang_code ] = $this->sitepress->get_language_details( $target_lang_code );
+						$language_code_aliases[] = esc_sql( str_replace( '-', '', $target_lang_code ) );
+					}
+				}
+			}
 		}
 
 
@@ -72,7 +87,21 @@ class WPML_ST_Strings {
 				$extra_cond .= " AND s.value LIKE '%" . esc_sql( $search_filter ) . "%' ";
 			}
 		}
-		$extra_cond .= isset( $_GET['context'] ) ? " AND s.context = '" . esc_sql( $_GET['context'] ) . "'" : '';
+
+		if( array_key_exists( 'context', $_GET ) ) {
+			$context = filter_var( $_GET['context'], FILTER_SANITIZE_STRING );
+
+			if ( self::EMPTY_CONTEXT_LABEL === $context ) {
+				$context = '';
+			}
+
+		}
+
+		$extra_cond .= '';
+		if ( isset( $context ) ) {
+			$extra_cond .= " AND s.context = '" . esc_sql( $context ) . "'";
+		}
+
 		if ( isset( $_GET['show_results'] ) && $_GET['show_results'] == 'all' ) {
 			$limit  = 9999;
 			$offset = 0;
@@ -84,16 +113,6 @@ class WPML_ST_Strings {
 
 		/* TRANSLATOR - START */
 		if ( $current_user_can_translate_strings ) {
-			foreach ( $user_lang_pairs as $source_lang_code => $pair ) {
-				if ( ! isset( $active_languages[ $source_lang_code ] ) ) {
-					$active_languages[ $source_lang_code ] = $this->sitepress->get_language_details( $source_lang_code );
-				}
-				foreach ( array_keys( $pair ) as $target_lang_code ) {
-					if ( ! isset( $active_languages[ $target_lang_code ] ) ) {
-						$active_languages[ $target_lang_code ] = $this->sitepress->get_language_details( $target_lang_code );
-					}
-				}
-			}
 
 			$_joins = $_sels = $_where = array();
 
@@ -328,7 +347,7 @@ class WPML_ST_Strings {
 
 	private function parse_row_translations( $row, $l, $_translations ) {
 		$language_code_alias = esc_sql( str_replace( '-', '', $l['code'] ) );
-		if ( $row[ 'id_' . $language_code_alias ] ) {
+		if ( isset( $row[ 'id_' . $language_code_alias ] ) ) {
 			$_translations[ $l['code'] ] = array(
 				'id'               => $row[ 'id_' . $language_code_alias ],
 				'status'           => $row[ 'status_' . $language_code_alias ],

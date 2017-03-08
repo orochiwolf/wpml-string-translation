@@ -9,6 +9,8 @@ class WPML_PB_Loader {
 		$pb_integration = null // Only needed for testing
 	) {
 
+		do_action( 'wpml_load_page_builders_integration' );
+
 		$page_builder_strategies = array();
 
 		$page_builder_config_import = new WPML_PB_Config_Import_Shortcode( $st_settings );
