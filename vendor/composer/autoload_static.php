@@ -4,7 +4,7 @@
 
 namespace Composer\Autoload;
 
-class ComposerStaticInit3ba0c3d35fefb47b1f1432833dcd5b9f
+class ComposerStaticInita2cd2f52c425c4cc940531b545dabcf8
 {
     public static $prefixesPsr0 = array (
         'x' => 
@@ -125,6 +125,7 @@ class ComposerStaticInit3ba0c3d35fefb47b1f1432833dcd5b9f
         'WPML_ST_WP_Wrapper' => __DIR__ . '/../..' . '/classes/filters/db-cache/class-wpml-st-wp-wrapper.php',
         'WPML_Slug_Translation' => __DIR__ . '/../..' . '/inc/slug-translation.php',
         'WPML_String_Scanner' => __DIR__ . '/../..' . '/inc/gettext/wpml-string-scanner.class.php',
+        'WPML_String_Shortcode' => __DIR__ . '/../..' . '/classes/wpml-string-shortcode.php',
         'WPML_String_Translation' => __DIR__ . '/../..' . '/inc/wpml-string-translation.class.php',
         'WPML_String_Translation_MO_Import' => __DIR__ . '/../..' . '/inc/gettext/wpml-string-translation-mo-import.class.php',
         'WPML_String_Translation_Table' => __DIR__ . '/../..' . '/classes/string-translation-ui/class-wpml-string-translation-table.php',
@@ -140,8 +141,8 @@ class ComposerStaticInit3ba0c3d35fefb47b1f1432833dcd5b9f
     public static function getInitializer(ClassLoader $loader)
     {
         return \Closure::bind(function () use ($loader) {
-            $loader->prefixesPsr0 = ComposerStaticInit3ba0c3d35fefb47b1f1432833dcd5b9f::$prefixesPsr0;
-            $loader->classMap = ComposerStaticInit3ba0c3d35fefb47b1f1432833dcd5b9f::$classMap;
+            $loader->prefixesPsr0 = ComposerStaticInita2cd2f52c425c4cc940531b545dabcf8::$prefixesPsr0;
+            $loader->classMap = ComposerStaticInita2cd2f52c425c4cc940531b545dabcf8::$classMap;
 
         }, null, ClassLoader::class);
     }

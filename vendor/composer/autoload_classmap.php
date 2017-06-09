@@ -114,6 +114,7 @@ return array(
     'WPML_ST_WP_Wrapper' => $baseDir . '/classes/filters/db-cache/class-wpml-st-wp-wrapper.php',
     'WPML_Slug_Translation' => $baseDir . '/inc/slug-translation.php',
     'WPML_String_Scanner' => $baseDir . '/inc/gettext/wpml-string-scanner.class.php',
+    'WPML_String_Shortcode' => $baseDir . '/classes/wpml-string-shortcode.php',
     'WPML_String_Translation' => $baseDir . '/inc/wpml-string-translation.class.php',
     'WPML_String_Translation_MO_Import' => $baseDir . '/inc/gettext/wpml-string-translation-mo-import.class.php',
     'WPML_String_Translation_Table' => $baseDir . '/classes/string-translation-ui/class-wpml-string-translation-table.php',
