@@ -90,7 +90,11 @@ $local      = new WPML_Localization( $wpdb );
 $themes     = wp_get_themes();
 $theme_data = array();
 foreach ( $themes as $theme_dir => $theme ) {
-	$theme_data[ $theme->get( 'TextDomain' ) ] = array(
+	$theme_domain = $theme->get( 'TextDomain' ) ?
+		$theme->get( 'TextDomain' ) :
+		$theme->get( 'Name' );
+
+	$theme_data[ $theme_domain ] = array(
         'name'      => $theme->get( 'Name' ),
         'directory' => $theme_dir,
     );

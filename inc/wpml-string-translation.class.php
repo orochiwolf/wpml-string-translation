@@ -86,7 +86,9 @@ class WPML_String_Translation
 		require WPML_ST_PATH . '/inc/wpml-localization.class.php';
 		require WPML_ST_PATH . '/inc/gettext/wpml-string-translation-mo-import.class.php';
 
-		require WPML_ST_PATH . '/inc/wpml-string-shortcode.php';
+		$wpml_string_shortcode = new WPML_String_Shortcode( $wpdb );
+		$wpml_string_shortcode->init_hooks();
+
 		include WPML_ST_PATH . '/inc/slug-translation.php';
 		wpml_st_load_admin_texts();
 
