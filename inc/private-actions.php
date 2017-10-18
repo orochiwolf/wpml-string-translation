@@ -27,7 +27,9 @@ function wpml_st_initialize_basic_strings() {
 		$WPML_String_Translation,
 		$pagenow,
 		isset( $_GET['page'] ) ? $_GET['page'] : '' );
-	$load_action->run();
+	if ( $sitepress->is_setup_complete() ) {
+		$load_action->run();
+	}
 }
 
 if ( is_admin() ) {
