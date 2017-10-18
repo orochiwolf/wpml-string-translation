@@ -786,8 +786,8 @@ class WPML_String_Translation
 	public function initialize_wp_and_widget_strings( ) {
 		$this->check_db_for_gettext_context( );
 
-		icl_register_string('WP',__('Blog Title','wpml-string-translation'), get_option('blogname'));
-		icl_register_string('WP',__('Tagline', 'wpml-string-translation'), get_option('blogdescription'));
+		icl_register_string( 'WP', 'Blog Title', get_option( 'blogname' ) );
+		icl_register_string( 'WP', 'Tagline', get_option( 'blogdescription' ) );
 
 		wpml_st_init_register_widget_titles();
 
@@ -806,11 +806,11 @@ class WPML_String_Translation
 			}
 		}
 
-		$widget_text = get_option('widget_text');
-		if(is_array($widget_text)){
-			foreach($widget_text as $k=>$w){
-				if(!empty($w) && isset($w['title']) && in_array($k, $active_text_widgets)){
-					icl_register_string('Widgets', 'widget body - ' . md5($w['text']), $w['text']);
+		$widget_text = get_option( 'widget_text' );
+		if ( is_array( $widget_text ) ) {
+			foreach ( $widget_text as $k => $w ) {
+				if ( ! empty( $w ) && isset( $w['title'], $w['text'] ) && in_array( $k, $active_text_widgets ) && $w['text'] ) {
+					icl_register_string( 'Widgets', 'widget body - ' . md5( $w['text'] ), $w['text'] );
 				}
 			}
 		}
@@ -857,6 +857,10 @@ class WPML_String_Translation
 	 * @return string
 	 */
 	public function get_admin_language() {
+		if ( $this->sitepress->is_wpml_switch_language_triggered() ) {
+			return $this->sitepress->get_admin_language();
+		}
+
 		if ( ! $this->admin_language ) {
 			$this->admin_language = $this->sitepress->get_admin_language();
 		}

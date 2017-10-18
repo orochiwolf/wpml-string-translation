@@ -26,7 +26,7 @@ class WPML_ST_MO_Scan_Hooks {
 	}
 
 	public function add_hooks() {
-		add_filter( 'override_load_textdomain', array( $this, 'block_loading_of_imported_mo_files' ), 10, 3 );
+		add_filter( 'override_load_textdomain', array( $this, 'block_loading_of_imported_mo_files' ), PHP_INT_MAX, 3 );
 		add_action( 'shutdown', array( $this, 'import_mo_files' ), 10, 0 );
 	}
 
