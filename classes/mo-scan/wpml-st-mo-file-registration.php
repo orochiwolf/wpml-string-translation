@@ -38,7 +38,7 @@ class WPML_ST_MO_File_Registration {
 
 	public function save_mo_file_info( $override, $domain, $mo_file_path ) {
 		if ( ! $this->components_find->is_component_active( $mo_file_path ) ) {
-			return;
+			return $override;
 		}
 
 		$file_path_pattern = $this->get_file_path_pattern( $mo_file_path );
@@ -47,6 +47,8 @@ class WPML_ST_MO_File_Registration {
 			$mo_file_path_in_lang = sprintf( $file_path_pattern, $lang_data['default_locale'] );
 			$this->register_single_file( $domain, $mo_file_path_in_lang );
 		}
+
+		return $override;
 	}
 
 	private function get_file_path_pattern( $mo_file_path ) {

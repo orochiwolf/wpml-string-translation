@@ -23,7 +23,6 @@ class WPML_ST_MO_Queue {
 	 * @param WPML_ST_MO_Dictionary $mo_dictionary
 	 * @param WPML_ST_MO_Scan $mo_translation_loader
 	 * @param WPML_ST_MO_Scan_Storage $mo_scan_storage
-	 * @param WPML_File $wpml_file
 	 * @param array $language_code_maps
 	 * @param int $limit
 	 */
@@ -157,14 +156,14 @@ class WPML_ST_MO_Queue {
 	}
 
 	public function is_locked() {
-		return (bool) get_option( self::LOCK_FIELD );
+		return (bool) get_transient( self::LOCK_FIELD );
 	}
 
 	public function lock() {
-		update_option( self::LOCK_FIELD, 1 );
+		set_transient( self::LOCK_FIELD, 1, MINUTE_IN_SECONDS * 5 );
 	}
 
 	public function unlock() {
-		update_option( self::LOCK_FIELD, 0 );
+		delete_transient( self::LOCK_FIELD );
 	}
 }
