@@ -33,7 +33,7 @@ class WPML_ST_Gettext_Hooks {
 	 *
 	 * @param WPML_String_Translation $string_translation
 	 * @param string $current_lang
-	 * @param string $all_strings_are_in_english
+	 * @param bool $all_strings_are_in_english
 	 * @param bool $translate_with_st
 	 */
 	public function __construct(
@@ -49,11 +49,15 @@ class WPML_ST_Gettext_Hooks {
 	}
 
 	public function init_hooks() {
+		if ( ! $this->translate_with_st ) {
+			return;
+		}
+
 		if ( $this->all_strings_are_in_english ) {
 			add_action( 'wpml_language_has_switched', array( $this, 'switch_language_hook' ), 10, 1 );
 		}
 
-		if ( $this->translate_with_st && $this->should_gettext_filters_be_turned_on() ) {
+		if ( $this->should_gettext_filters_be_turned_on() ) {
 			add_action( 'plugins_loaded', array( $this, 'init_gettext_hooks' ), 2 );
 		}
 	}

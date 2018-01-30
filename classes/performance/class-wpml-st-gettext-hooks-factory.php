@@ -31,7 +31,7 @@ class WPML_ST_Gettext_Hooks_Factory {
 		return new WPML_ST_Gettext_Hooks(
 			$this->string_translation,
 			$this->get_current_language(),
-			get_option( self::ALL_STRINGS_ARE_IN_ENGLISH_OPTION ),
+			'en' === $this->sitepress->get_default_language() && get_option( self::ALL_STRINGS_ARE_IN_ENGLISH_OPTION ),
 			$this->translate_with_st
 		);
 	}

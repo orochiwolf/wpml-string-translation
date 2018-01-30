@@ -10,17 +10,16 @@ class WPML_Slug_Translation {
 
 	/** @var wpdb $wpdb */
 	private $wpdb;
-	
+
+	private $ls_languages_status;
+
 	/** @var array $translated_slugs */
 	private $translated_slugs = array();
 
-	/**
-	 * @param SitePress               $sitepress_instance
-	 * @param wpdb                    $wpdb_instance
-	 */
-	function __construct( &$sitepress_instance, &$wpdb_instance ) {
-		$this->sitepress             = $sitepress_instance;
-		$this->wpdb                  = $wpdb_instance;
+	function __construct( SitePress $sitepress, wpdb $wpdb, WPML_Get_LS_Languages_Status $ls_language_status ) {
+		$this->sitepress             = $sitepress;
+		$this->wpdb                  = $wpdb;
+		$this->ls_languages_status   = $ls_language_status;
 		$this->ignore_post_type_link = false;
 	}
 
@@ -29,12 +28,15 @@ class WPML_Slug_Translation {
 		if ( ! empty( $slug_settings['on'] ) ) {
 			add_filter( 'option_rewrite_rules', array( $this, 'rewrite_rules_filter' ), 1, 1 ); // high priority
 			add_filter( 'post_type_link', array( $this, 'post_type_link_filter' ), 1, 4 ); // high priority
-			add_filter( 'edit_post', array( $this, 'clear_post_link_cache'), 1, 2 );
+			add_filter( 'edit_post', array( $this, 'clear_post_link_cache' ), 1, 2 );
 			add_filter( 'query_vars', array( $this, 'add_cpt_names' ), 1, 2 );
 			add_filter( 'pre_get_posts', array( $this, 'filter_pre_get_posts' ), - 1000, 2 );
 			// Slug translation API
 			add_filter( 'wpml_get_translated_slug', array( $this, 'get_translated_slug' ), 1, 3 );
-			add_filter( 'wpml_get_slug_translation_languages', array( $this, 'get_slug_translation_languages_filter' ), 1, 2 );
+			add_filter( 'wpml_get_slug_translation_languages', array(
+				$this,
+				'get_slug_translation_languages_filter'
+			), 1, 2 );
 		}
 		add_action( 'icl_ajx_custom_call', array( $this, 'gui_save_options' ), 10, 2 );
 		// Slug translation API
@@ -42,27 +44,29 @@ class WPML_Slug_Translation {
 		add_action( 'wpml_activate_slug_translation', array( $this, 'activate_slug_translation_action' ), 1, 2 );
 		add_action( 'wpml_save_cpt_sync_settings', array( $this, 'save_sync_options' ), 1, 0 );
 		add_filter( 'wpml_get_slug_translation_url', array( $this, 'get_slug_translation_url_filter' ), 1, 1 );
-		
+
 		if ( is_admin() ) {
 			add_action( 'wp_loaded', array( $this, 'maybe_migrate_string_name' ), 10, 0 );
 		}
+
 	}
 
 	public static function get_slug_by_type( $type ) {
-		global $wpdb, $sitepress;
+		global $wpdb;
 
-		$rewrite_rule_filter = new WPML_Rewrite_Rule_Filter( $wpdb, $sitepress );
+		$slug_records = new WPML_Slug_Translation_Records( $wpdb );
 
-		return $rewrite_rule_filter->get_slug_by_type( $type );
+		return $slug_records->get_original( $type );
 	}
 
 	static function rewrite_rules_filter( $value ) {
 		global $wpdb, $sitepress;
-		
+
 		if ( empty( $value ) ) {
 			return $value;
 		} else {
-			$rewrite_rule_filter = new WPML_Rewrite_Rule_Filter( $wpdb, $sitepress );
+			$rewrite_rule_filter = new WPML_Rewrite_Rule_Filter( new WPML_Slug_Translation_Records( $wpdb ), $sitepress );
+
 			return $rewrite_rule_filter->rewrite_rules_filter( $value );
 		}
 	}
@@ -85,7 +89,7 @@ class WPML_Slug_Translation {
 										    AND (s.context = %s OR s.context = %s)",
 					'URL slug: ' . $post_type,
 					'default',
-					'WordPress') );
+					'WordPress' ) );
 				if ( (bool) $slug_original === true ) {
 					$this->translated_slugs[ $post_type ][ $slug_original->language ] = $slug_original->value;
 
@@ -123,23 +127,25 @@ class WPML_Slug_Translation {
 		if ( $this->ignore_post_type_link ) {
 			return $post_link;
 		}
-		
+
 		if ( ! $this->sitepress->is_translated_post_type( $post->post_type )
 		     || ! ( $ld = $this->sitepress->get_element_language_details( $post->ID, 'post_' . $post->post_type ) )
 		) {
 			return $post_link;
 		}
 
-		if ( isset( $this->post_link_cache[ $post->ID ][ $leavename . '#' . $sample ] ) ) {
-			$post_link = $this->post_link_cache[ $post->ID ][ $leavename . '#' . $sample ];
+		$cache_key = $leavename . '#' . $sample;
+		$cache_key .= $this->ls_languages_status->is_getting_ls_languages() ? 'yes' : 'no';
+		if ( isset( $this->post_link_cache[ $post->ID ][ $cache_key ] ) ) {
+			$post_link = $this->post_link_cache[ $post->ID ][ $cache_key ];
 		} else {
 			$slug_settings = $this->sitepress->get_setting( 'posts_slug_translation' );
 			$slug_settings = ! empty( $slug_settings['types'][ $post->post_type ] ) ? $slug_settings['types'][ $post->post_type ] : null;
 			if ( (bool) $slug_settings === true ) {
-				
-				$post_type_obj = get_post_type_object ( $post->post_type );
-				$slug_this = isset( $post_type_obj->rewrite[ 'slug' ] ) ? trim ( $post_type_obj->rewrite[ 'slug' ], '/' ) : false;
-				$slug_real = $this->get_translated_slug( $slug_this, $post->post_type, $ld->language_code );
+
+				$post_type_obj = get_post_type_object( $post->post_type );
+				$slug_this     = isset( $post_type_obj->rewrite['slug'] ) ? trim( $post_type_obj->rewrite['slug'], '/' ) : false;
+				$slug_real     = $this->get_translated_slug( $slug_this, $post->post_type, $ld->language_code );
 
 				if ( empty( $slug_real ) || empty( $slug_this ) || $slug_this == $slug_real ) {
 					return $post_link;
@@ -150,19 +156,19 @@ class WPML_Slug_Translation {
 				if ( isset( $wp_rewrite->extra_permastructs[ $post->post_type ] ) ) {
 					$struct_original = $wp_rewrite->extra_permastructs[ $post->post_type ]['struct'];
 
-					$lslash = false !== strpos( $struct_original, '/' . $slug_this ) ? '/' : '';
+					$lslash                                                       = false !== strpos( $struct_original, '/' . $slug_this ) ? '/' : '';
 					$wp_rewrite->extra_permastructs[ $post->post_type ]['struct'] = preg_replace( '@' . $lslash . $slug_this . '/@',
-																								  $lslash . $slug_real . '/',
-																								  $struct_original );
-					$this->ignore_post_type_link = true;
-					$post_link = get_post_permalink( $post->ID, $leavename, $sample );
-					$this->ignore_post_type_link = false;
+						$lslash . $slug_real . '/',
+						$struct_original );
+					$this->ignore_post_type_link                                  = true;
+					$post_link                                                    = get_post_permalink( $post->ID, $leavename, $sample );
+					$this->ignore_post_type_link                                  = false;
 					$wp_rewrite->extra_permastructs[ $post->post_type ]['struct'] = $struct_original;
 				} else {
 					$post_link = str_replace( $slug_this . '=', $slug_real . '=', $post_link );
 				}
 			}
-			$this->post_link_cache[ $post->ID ][ $leavename . '#' . $sample ] = $post_link;
+			$this->post_link_cache[ $post->ID ][ $cache_key ] = $post_link;
 		}
 
 		return $post_link;
@@ -175,15 +181,15 @@ class WPML_Slug_Translation {
 	private static function get_all_slug_translations() {
 		global $wpdb, $sitepress_settings;
 
-		$cache_key   = 'WPML_Slug_Translation::get_all_slug_translations';
+		$cache_key = 'WPML_Slug_Translation::get_all_slug_translations';
 
 		$slugs_translations = wp_cache_get( $cache_key );
-		
+
 		if ( ! is_array( $slugs_translations ) ) {
-			$in = '';
+			$in    = '';
 			$types = array();
-			if ( isset( $sitepress_settings[ 'posts_slug_translation' ][ 'types' ] ) ) {
-				$types = $sitepress_settings[ 'posts_slug_translation' ][ 'types' ];
+			if ( isset( $sitepress_settings['posts_slug_translation']['types'] ) ) {
+				$types = $sitepress_settings['posts_slug_translation']['types'];
 				foreach ( $types as $type => $state ) {
 					if ( $state ) {
 						if ( $in != '' ) {
@@ -197,15 +203,15 @@ class WPML_Slug_Translation {
 			if ( $in ) {
 
 				$in = str_replace( '%', '%%', $in );
-				
+
 				$data = $wpdb->get_results( $wpdb->prepare( "SELECT t.value, s.name
 										FROM {$wpdb->prefix}icl_strings s
 										JOIN {$wpdb->prefix}icl_string_translations t ON t.string_id = s.id
 										WHERE s.name IN ({$in})
 											AND t.status = %d
 											AND t.value <> ''",
-											   ICL_TM_COMPLETE ) );
-				foreach($data as $row){
+					ICL_TM_COMPLETE ) );
+				foreach ( $data as $row ) {
 					foreach ( array_keys( $types ) as $type ) {
 						if ( preg_match( '#\s' . $type . '$#', $row->name ) === 1 ) {
 							$slugs_translations[ $row->value ] = $type;
@@ -213,7 +219,7 @@ class WPML_Slug_Translation {
 					}
 				}
 			}
-			
+
 			wp_cache_set( $cache_key, $slugs_translations );
 		}
 
@@ -267,31 +273,31 @@ class WPML_Slug_Translation {
 		switch ( $action ) {
 			case 'icl_slug_translation':
 				global $sitepress;
-				$iclsettings[ 'posts_slug_translation' ][ 'on' ] = intval( ! empty( $_POST[ 'icl_slug_translation_on' ] ) );
+				$iclsettings['posts_slug_translation']['on'] = intval( ! empty( $_POST['icl_slug_translation_on'] ) );
 				$sitepress->save_settings( $iclsettings );
-				echo '1|' . $iclsettings[ 'posts_slug_translation' ][ 'on' ];
+				echo '1|' . $iclsettings['posts_slug_translation']['on'];
 				break;
 		}
 
 	}
-	
+
 	static function get_sql_to_get_string_id( $post_type ) {
 		global $wpdb;
-		
+
 		return $wpdb->prepare( "SELECT id
                                 FROM {$wpdb->prefix}icl_strings
                                 WHERE name = %s",
-                                'URL slug: ' . $post_type
-                             );
+			'URL slug: ' . $post_type
+		);
 	}
-	
-	static function get_translations ( $slug ) {
+
+	static function get_translations( $slug ) {
 		global $wpdb;
-		
-        $string_id_prepared = self::get_sql_to_get_string_id( $slug );
-        $string_id = $wpdb->get_var( $string_id_prepared );
-        $slug_translations = icl_get_string_translations_by_id( $string_id );
-		
+
+		$string_id_prepared = self::get_sql_to_get_string_id( $slug );
+		$string_id          = $wpdb->get_var( $string_id_prepared );
+		$slug_translations  = icl_get_string_translations_by_id( $string_id );
+
 		return array( $string_id, $slug_translations );
 	}
 
@@ -310,26 +316,26 @@ class WPML_Slug_Translation {
 				$string_id     = $wpdb->get_var( self::get_sql_to_get_string_id( $type ) );
 				$string_id     = empty( $string_id ) ? self::register_string_for_slug( $type, $slug ) : $string_id;
 				if ( $string_id ) {
-					if ( ! isset( $data[ 'original' ] ) ) {
-						$data[ 'original' ]  = $sitepress->get_default_language();
+					if ( ! isset( $data['original'] ) ) {
+						$data['original'] = $sitepress->get_default_language();
 					}
 					$string = new WPML_ST_String( $string_id, $wpdb );
-					if ( $string->get_language() != $data[ 'original' ] ) {
-						$string->set_language( $data[ 'original' ] );
+					if ( $string->get_language() != $data['original'] ) {
+						$string->set_language( $data['original'] );
 					}
-					if ( isset( $data[ 'langs' ] ) ) {
-						
+					if ( isset( $data['langs'] ) ) {
+
 						foreach ( $sitepress->get_active_languages() as $lang ) {
-							if ( $lang['code'] != $data[ 'original' ] ) {
+							if ( $lang['code'] != $data['original'] ) {
 								$data['langs'][ $lang['code'] ] = join( '/',
-																		array_map( array( 'WPML_Slug_Translation', 'sanitize' ),
-																				   explode( '/',
-																							$data['langs'][ $lang['code'] ] ) ) );
+									array_map( array( 'WPML_Slug_Translation', 'sanitize' ),
+										explode( '/',
+											$data['langs'][ $lang['code'] ] ) ) );
 								$data['langs'][ $lang['code'] ] = urldecode( $data['langs'][ $lang['code'] ] );
 								icl_add_string_translation( $string_id,
-															$lang['code'],
-															$data['langs'][ $lang['code'] ],
-															ICL_TM_COMPLETE );
+									$lang['code'],
+									$data['langs'][ $lang['code'] ],
+									ICL_TM_COMPLETE );
 							}
 						}
 					}
@@ -340,31 +346,31 @@ class WPML_Slug_Translation {
 
 		$sitepress->set_setting( 'posts_slug_translation', $slug_settings, true );
 	}
-	
+
 	static function sanitize( $slug ) {
-		
+
 		// we need to preserve the %
 		$slug = str_replace( '%', '%45', $slug );
 		$slug = sanitize_title_with_dashes( $slug );
 		$slug = str_replace( '%45', '%', $slug );
-		
+
 		return $slug;
 	}
 
 	static function slug_translation_available_filter( $value ) {
 		return true;
 	}
-	
+
 	static function activate_slug_translation_action( $post_type, $slug = null ) {
 		global $wpdb, $sitepress;
 
-		if( is_null( $slug ) ){
+		if ( is_null( $slug ) ) {
 			$slug = $post_type;
 		}
 
 		$string_id = $wpdb->get_var( self::get_sql_to_get_string_id( $slug ) );
 
-		if( ! $string_id ){
+		if ( ! $string_id ) {
 			self::register_string_for_slug( $post_type, $slug );
 		}
 
@@ -375,68 +381,68 @@ class WPML_Slug_Translation {
 			$sitepress->set_setting( 'posts_slug_translation', $posts_slug_translation, true );
 		}
 	}
-	
+
 	static function register_string_for_slug( $post_type, $slug ) {
 		return icl_register_string( 'WordPress', 'URL slug: ' . $post_type, $slug );
 	}
-	
+
 	function get_slug_translation_languages_filter( $languages, $post_type ) {
 		global $wpdb;
-		
-        $slug_translation_languages = $wpdb->get_col( $wpdb->prepare(
-				 "SELECT tr.language
+
+		$slug_translation_languages = $wpdb->get_col( $wpdb->prepare(
+			"SELECT tr.language
 				  FROM {$wpdb->prefix}icl_strings AS s
 				  LEFT JOIN {$wpdb->prefix}icl_string_translations AS tr ON s.id = tr.string_id
 				  WHERE s.context = 'WordPress' AND
 						s.name = %s AND
 						tr.status = %s",
 
-				 'Url slug: ' . $post_type,
-				 ICL_TM_COMPLETE
+			'Url slug: ' . $post_type,
+			ICL_TM_COMPLETE
 		) );
 
 		return $slug_translation_languages;
 	}
-	
-	static function get_slug_translation_url_filter ( $url ) {
+
+	static function get_slug_translation_url_filter( $url ) {
 		if ( defined( 'WPML_TM_VERSION' ) ) {
 			return admin_url( 'admin.php?page=' . WPML_TM_FOLDER . '/menu/main.php&sm=mcsetup#ml-content-setup-sec-7' );
 		} else {
 			return admin_url( 'admin.php?page=' . ICL_PLUGIN_FOLDER . '/menu/translation-options.php#ml-content-setup-sec-7' );
 		}
 	}
-	
+
 	public function maybe_migrate_string_name() {
 		global $wpdb;
 
 		$slug_settings = $this->sitepress->get_setting( 'posts_slug_translation' );
-		
-		if ( ! isset( $slug_settings[ 'string_name_migrated' ] ) ) {
+
+		if ( ! isset( $slug_settings['string_name_migrated'] ) ) {
 
 			$queryable_post_types = get_post_types( array( 'publicly_queryable' => true ) );
-	
+
 			foreach ( $queryable_post_types as $type ) {
 				$post_type_obj = get_post_type_object( $type );
 				$slug          = trim( $post_type_obj->rewrite['slug'], '/' );
-				
+
 				if ( $slug ) {
 					// First check if we should migrate from the old format URL slug: slug
 					$string_id = $wpdb->get_var( $wpdb->prepare( "SELECT id
 											FROM {$wpdb->prefix}icl_strings
 											WHERE name = %s AND value = %s",
-											'URL slug: ' . $slug,
-											$slug
-										 ) );
+						'URL slug: ' . $slug,
+						$slug
+					) );
 					if ( $string_id ) {
 						// migrate it to URL slug: post_type
-						
-						$st_update[ 'name' ] = 'URL slug: ' . $type;
+
+						$st_update['name'] = 'URL slug: ' . $type;
 						$wpdb->update( $wpdb->prefix . 'icl_strings', $st_update, array( 'id' => $string_id ) );
 					}
 				}
 			}
-			
-			$slug_settings[ 'string_name_migrated' ] = true;
+
+			$slug_settings['string_name_migrated'] = true;
 			$this->sitepress->set_setting( 'posts_slug_translation', $slug_settings, true );
 		}
 	}
