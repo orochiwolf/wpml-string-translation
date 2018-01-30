@@ -58,7 +58,7 @@ class WPML_Register_String_Filter extends WPML_Displayed_String_Filter {
 			$has_translation = false;
 		}
 
-		if ( ! $translation && $untranslated_text ) {
+		if ( ! $translation && $this->can_register_string( $untranslated_text, $name, $context ) ) {
 			list ($name, $domain, $gettext_content) = $this->transform_parameters( $name, $context );
 			list( $name, $domain ) = array_map( array( $this, 'truncate_long_string' ), array( $name, $domain ) );
 
@@ -69,6 +69,10 @@ class WPML_Register_String_Filter extends WPML_Displayed_String_Filter {
 		}
 
 		return $res;
+	}
+
+	private function can_register_string( $original_value, $name, $context ) {
+		return $original_value || ( $name && md5( '' ) !== $name && $context );
 	}
 
 	public function force_saving_of_autoregistered_strings() {
