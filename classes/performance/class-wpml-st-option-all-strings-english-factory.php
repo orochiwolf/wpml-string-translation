@@ -5,8 +5,8 @@ class WPML_ST_Options_All_Strings_English_Factory implements IWPML_Backend_Actio
 	 * @return WPML_ST_Options_All_Strings_English
 	 */
 	public function create() {
-		global $wpdb;
+		global $wpdb, $sitepress;
 
-		return new WPML_ST_Options_All_Strings_English( $wpdb );
+		return new WPML_ST_Options_All_Strings_English( $wpdb, $sitepress->get_default_language() );
 	}
 }
