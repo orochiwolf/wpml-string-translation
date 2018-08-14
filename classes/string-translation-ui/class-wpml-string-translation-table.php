@@ -93,10 +93,12 @@ class WPML_String_Translation_Table {
 					<img src="<?php echo esc_url( $sitepress->get_flag_url( $icl_string['string_language'] ) ) ?>"> <?php echo esc_html( $icl_string['value'] ) ?>
 				</div>
 				<div style="float:right;">
-					<a href="#icl-st-toggle-translations"><?php esc_html_e( 'translations', 'wpml-string-translation' ) ?></a>
+					<a href="#icl-st-toggle-translations" class="js-wpml-st-toggle-translations"><?php esc_html_e( 'translations', 'wpml-string-translation' ) ?></a>
 				</div>
 				<br clear="all"/>
-				<div class="icl-st-inline">
+				<div class="icl-st-inline"
+					 data-original="<?php echo esc_attr( $icl_string['value'] ); ?>"
+					 data-source-lang="<?php echo esc_attr( $icl_string['string_language'] ); ?>">
 					<?php foreach ( $this->active_languages as $lang ): if ( $lang['code'] === $icl_string['string_language'] ) {
 						continue;
 					} ?>

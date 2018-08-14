@@ -83,6 +83,7 @@ function icl_st_toggler(){
     jQuery(".icl-st-inline").slideUp();
     var inl = jQuery(this).parent().next().next();
     if(inl.css('display') == 'none'){
+		inl.trigger('wpml-open-string-translations', inl);
         inl.slideDown();            
     }else{
         inl.slideUp();            
