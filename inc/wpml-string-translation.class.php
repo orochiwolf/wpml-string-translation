@@ -161,7 +161,9 @@ class WPML_String_Translation
 				wp_enqueue_script( 'wp-color-picker' );
 				wp_enqueue_style( 'wp-color-picker' );
 				wp_enqueue_script( 'wpml-st-settings', WPML_ST_URL . '/res/js/settings.js', array( 'jquery' ), WPML_ST_VERSION );
-				wp_enqueue_script( 'wpml-st-scripts', WPML_ST_URL . '/res/js/scripts.js', array( 'jquery', 'jquery-ui-dialog', 'wpml-popover-tooltip' ), WPML_ST_VERSION );
+				wp_enqueue_script( 'wpml-st-scripts', WPML_ST_URL . '/res/js/scripts.js', array( 'jquery', 'jquery-ui-dialog' ), WPML_ST_VERSION );
+				wp_enqueue_script(  OTGS_Assets_Handles::POPOVER_TOOLTIP  );
+				wp_enqueue_style(  OTGS_Assets_Handles::POPOVER_TOOLTIP  );
 				wp_enqueue_script( 'wpml-excluded-contexts', WPML_ST_URL . '/res/js/wpml-excluded-contexts.js', array( 'jquery', 'jquery-ui-dialog', 'wpml-st-scripts' ), WPML_ST_VERSION );
 				wp_enqueue_script( 'wpml-st-change-domian-lang', WPML_ST_URL . '/res/js/change_string_domain_lang.js', array( 'jquery', 'jquery-ui-dialog' ), WPML_ST_VERSION );
 				wp_enqueue_script( 'wpml-st-translation_basket', WPML_ST_URL . '/res/js/wpml_string_translation_basket.js', array( 'jquery' ), WPML_ST_VERSION );
